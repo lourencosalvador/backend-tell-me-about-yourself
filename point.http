@@ -1,0 +1,6 @@
+POST http://localhost:3333/audio/0a191af1-5a82-4d2b-84f2-a0c74382a6ee/transcription
+Content-Type: application/json
+
+{
+    "prompt": "clean architecture, ddd"
+}

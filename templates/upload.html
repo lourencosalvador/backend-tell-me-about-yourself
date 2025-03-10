@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload de Vídeo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .upload-box {
+            border: 2px dashed #3498db;
+            padding: 20px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .upload-box:hover {
+            background: #e3f2fd;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            border: none;
+            background: #3498db;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #217dbb;
+        }
+        .status {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Upload de Vídeo</h2>
+        <label class="upload-box" for="videoInput">Clique para selecionar um vídeo</label>
+        <input type="file" id="videoInput" accept="video/*">
+        <button id="uploadButton">Enviar Vídeo</button>
+        <p class="status" id="status"></p>
+    </div>
+
+    <script>
+        document.getElementById('uploadButton').addEventListener('click', async () => {
+            const fileInput = document.getElementById('videoInput');
+            const statusText = document.getElementById('status');
+            
+            if (!fileInput.files.length) {
+                statusText.textContent = "Por favor, selecione um vídeo.";
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append("file", file);
+
+            statusText.textContent = "Enviando...";
+
+            try {
+                const response = await fetch("http://localhost:3333/upload", {
+                    method: "POST",
+                    body: formData
+                }); 
+                
+                const result = await response.json();
+                if (response.ok) {
+                    statusText.textContent = "Upload concluído! ID do áudio: " + result.audioId;
+                } else {
+                    statusText.textContent = "Erro no upload: " + result.error;
+                }
+            } catch (error) {
+                statusText.textContent = "Erro ao conectar ao servidor.";
+            }
+        });
+    </script>
+</body>
+</html>
