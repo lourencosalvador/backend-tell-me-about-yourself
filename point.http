@@ -1,6 +1,55 @@
-POST http://localhost:3333/audio/0a191af1-5a82-4d2b-84f2-a0c74382a6ee/transcription
+POST http://localhost:3333/audio/28ba0db6-c02e-4b47-b211-41481e77b476/transcription
 Content-Type: application/json
 
 {
     "prompt": "clean architecture, ddd"
 }
+
+### Criar um novo usuário
+POST http://localhost:3333/users
+Content-Type: application/json
+
+{
+  "name": "Usuário Teste",
+  "email": "usuario@gmail.com",
+  "password": "senha123",
+  "class": "11ª",
+  "photoUrl": "https://i.pinimg.com/736x/5f/7f/04/5f7f042bfbf763e36130d5bab95e13de.jpg"
+}
+
+###
+
+POST http://localhost:3333/users/auth
+Content-Type: application/json
+
+{
+  "email": "usuario@gmail.com",
+  "password": "senha123"
+}
+
+###
+
+GET http://localhost:3333/users/50966be6-b75e-4da9-9545-576450b959d8
+
+###
+
+PUT http://localhost:3333/users/50966be6-b75e-4da9-9545-576450b959d8
+Content-Type: application/json
+
+{
+  "name": "Nome Atualizado",
+  "class": "12ª"
+}
+
+###
+
+PUT http://localhost:3333/users/50966be6-b75e-4da9-9545-576450b959d8
+Content-Type: application/json
+
+{
+  "password": "novaSenha456"
+}
+
+###
+
+DELETE http://localhost:3333/users/50966be6-b75e-4da9-9545-576450b959d8

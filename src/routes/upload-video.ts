@@ -15,9 +15,9 @@ export async function uploadVideoRoute(app: FastifyInstance) {
         console.log("📥 Recebendo requisição de upload...")
 
         const data = await req.file()
-        if (!data) {
+        if  (!data) {
             console.error("❌ Nenhum arquivo enviado!")
-            return reply.status(400).send({ error: "Nenhum arquivo enviado" })
+            return reply.status(400).send({ error: "Nenhum arquivo enviado" }) 
         } 
 
         console.log("📂 Arquivo recebido:", data.filename) 

@@ -33,3 +33,14 @@ model Transcription {
 
   audio     Audio   @relation(fields: [audioId], references: [id], onDelete: Cascade)
 }
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  class     String   // Classe do estudante (10ª à 13ª)
+  photoUrl  String?  // Opcional, URL da foto do perfil
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
