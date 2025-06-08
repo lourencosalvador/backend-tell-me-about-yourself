@@ -39,6 +39,7 @@ export async function authUser(app: FastifyInstance) {
             email: user.email,
             class: user.class,
             photoUrl: user.photoUrl,
+            recommendation: user.recommendation
           },
           token: sessionToken
         };

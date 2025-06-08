@@ -6,9 +6,9 @@ import { prisma } from "../../lib/prisma";
 export async function getUser(app: FastifyInstance) {
     app.get('/users/:userId', async (req, reply) => {
         const paramsSchema = z.object({
-            userId: z.string().uuid(),
+            userId: z.string().uuid(), 
         });
-
+ 
         try {
             const { userId } = paramsSchema.parse(req.params);
 

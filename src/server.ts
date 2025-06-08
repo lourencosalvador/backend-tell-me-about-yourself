@@ -1,16 +1,21 @@
+import 'dotenv/config'
 import { fastify } from "fastify"
 import { fastifyCors } from "@fastify/cors"
 import { validatorCompiler, serializerCompiler } from "fastify-type-provider-zod"
 import multipart from "@fastify/multipart"
 import { createTranscriptionRoute } from "./routes/create-transcription"
 import { uploadVideoRoute } from "./routes/upload-video"
+import { getVideoTranscriptionRoute } from "./routes/get-video-transcription"
 import { getUser } from "./routes/user/get-user"
 import { authUser } from "./routes/user/user-auth"
 import { deleteUser } from "./routes/user/delete-user"
 import { updateUser } from "./routes/user/update-user"
 import { createUser } from "./routes/user/create-user"
+import { userVideos } from "./routes/user-videos"
+import { deleteVideo } from "./routes/delete-video"
+import { streamVideo } from "./routes/stream-video"
 
-const app = fastify()
+const app = fastify() 
 
 app.setValidatorCompiler(validatorCompiler)
 app.setSerializerCompiler(serializerCompiler)
@@ -19,14 +24,17 @@ app.register(multipart)
 
 app.register(uploadVideoRoute)
 app.register(createTranscriptionRoute)
+app.register(getVideoTranscriptionRoute)
 
-app.register(getUser)
+app.register(getUser) 
 app.register(authUser)
 app.register(updateUser)
 app.register(deleteUser)
 app.register(createUser)
+app.register(userVideos)
+app.register(deleteVideo)
+app.register(streamVideo)
 
-
-app.listen({ port: 3333 }).then(() => {
-  console.log("Server running on port 3333")
+app.listen({ port: 8000, host: '0.0.0.0' }).then(() => {
+  console.log("Server running on port 8000")
 })

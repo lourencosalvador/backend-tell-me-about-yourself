@@ -1,39 +1,44 @@
 <!DOCTYPE html>
 <html lang="pt">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload de Vídeo</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload e Vídeos do Usuário</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             background-color: #f4f4f4;
+            padding: 20px;
         }
+
         .container {
-            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
             background: white;
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
+
         .upload-box {
             border: 2px dashed #3498db;
             padding: 20px;
+            text-align: center;
             cursor: pointer;
+            margin-bottom: 10px;
             transition: background 0.3s;
         }
+
         .upload-box:hover {
             background: #e3f2fd;
         }
+
         input[type="file"] {
             display: none;
         }
+
         button {
-            margin-top: 10px;
             padding: 10px 20px;
             border: none;
             background: #3498db;
@@ -41,30 +46,93 @@
             border-radius: 5px;
             cursor: pointer;
             transition: background 0.3s;
+            margin-top: 10px;
+            margin-right: 5px;
         }
+
         button:hover {
             background: #217dbb;
         }
+
         .status {
             margin-top: 10px;
             font-weight: bold;
         }
+
+        .video-list {
+            margin-top: 30px;
+        }
+
+        .video-item {
+            background: #f9f9f9;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .video-item h4 {
+            margin: 0 0 5px;
+        }
+
+        .transcription {
+            font-style: italic;
+            color: #555;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h2>Upload de Vídeo</h2>
         <label class="upload-box" for="videoInput">Clique para selecionar um vídeo</label>
-        <input type="file" id="videoInput" accept="video/*">
+        <input type="file" id="videoInput" accept="video/*" />
         <button id="uploadButton">Enviar Vídeo</button>
         <p class="status" id="status"></p>
+
+        <hr />
+
+        <h3>Vídeos do Usuário</h3>
+        <button id="loadVideosButton">Carregar Vídeos</button>
+        <div class="video-list" id="videoList"></div>
     </div>
 
     <script>
+        const userId = "e40d5be4-bbed-483a-b63a-5555e8ce9257";
+        const statusText = document.getElementById('status');
+        const videoListEl = document.getElementById('videoList');
+      
+        function renderLoading() {
+          videoListEl.innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+              <div class="loader"></div>
+              <p>Carregando vídeos...</p>
+            </div>
+          `;
+        }
+
         document.getElementById('uploadButton').addEventListener('click', async () => {
             const fileInput = document.getElementById('videoInput');
-            const statusText = document.getElementById('status');
-            
             if (!fileInput.files.length) {
                 statusText.textContent = "Por favor, selecione um vídeo.";
                 return;
@@ -77,11 +145,11 @@
             statusText.textContent = "Enviando...";
 
             try {
-                const response = await fetch("http://localhost:3333/upload", {
+                const response = await fetch(`http://localhost:8000/videos/upload?userId=${userId}`, {
                     method: "POST",
                     body: formData
-                }); 
-                
+                });
+
                 const result = await response.json();
                 if (response.ok) {
                     statusText.textContent = "Upload concluído! ID do áudio: " + result.audioId;
@@ -92,6 +160,63 @@
                 statusText.textContent = "Erro ao conectar ao servidor.";
             }
         });
-    </script>
+      
+        async function carregarVideos() {
+          renderLoading();
+       
+          try {
+            const response = await fetch(`http://localhost:8000/videos/${userId}`);
+            const data = await response.json();
+      
+            if (response.ok) {
+              if (!data.videos.length) {
+                videoListEl.innerHTML = "<p>Nenhum vídeo encontrado.</p>";
+                return;
+              }
+      
+              videoListEl.innerHTML = data.videos.map(video => `
+                <div class="video-item">
+                  <h4>Vídeo ID: ${video.id}</h4>
+                  <video controls width="100%" src="${video.url}"></video>
+                  <p>Data: ${new Date(video.createdAt).toLocaleString()}</p>
+                  ${video.audio && video.audio.transcription 
+                    ? `<p class="transcription">Transcrição: ${video.audio.transcription.text}</p>` 
+                    : '<p class="transcription">Sem transcrição disponível.</p>'
+                  }
+                  <button onclick="deletarVideo('${video.id}')">🗑️ Deletar</button>
+                </div>
+              `).join("");
+            } else {
+              videoListEl.innerHTML = `<p>Erro ao carregar vídeos: ${data.error}</p>`;
+            }
+          } catch (error) {
+            videoListEl.innerHTML = "<p>Erro de conexão com o servidor.</p>";
+          }
+        }
+      
+        async function deletarVideo(videoId) {
+          if (!confirm("Tem certeza que deseja deletar este vídeo?")) return;
+      
+          try {
+            const response = await fetch(`http://localhost:8000/videos/${videoId}`, {
+              method: 'DELETE'
+            });
+      
+            if (response.ok) {
+              alert("Vídeo deletado com sucesso.");
+              carregarVideos(); // atualiza a lista
+            } else {
+              const error = await response.json();
+              alert("Erro ao deletar vídeo: " + error.error);
+            }
+          } catch (err) {
+            alert("Erro de conexão com o servidor.");
+          }
+        }
+      
+        document.getElementById('loadVideosButton').addEventListener('click', carregarVideos);
+      </script>
+      
 </body>
+
 </html>

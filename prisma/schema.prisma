@@ -13,34 +13,58 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Video {
-  id   String @id @default(uuid())
-  path String
-}
-
-model Audio {
-  id   String @id @default(uuid())
-  path String
-
-  Transcription Transcription[]
-}
-
-model Transcription {
-  id        String  @id @default(uuid())
-  audioId   String  @unique
-  text      String
-  createdAt DateTime @default(now())
-
-  audio     Audio   @relation(fields: [audioId], references: [id], onDelete: Cascade)
-}
-
 model User {
   id        String   @id @default(uuid())
   name      String
   email     String   @unique
   password  String
-  class     String   // Classe do estudante (10ª à 13ª)
-  photoUrl  String?  // Opcional, URL da foto do perfil
+  class     String
+  photoUrl  String?
+  recommendation String? 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+
+
+  // Relações
+  videos Video[]
+  audios Audio[]
+}
+
+
+model Video {
+  id        String   @id @default(uuid())
+  path      String
+  userId    String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  audio Audio?
+}
+
+model Audio {
+  id      String  @id @default(uuid())
+  path    String
+  userId  String?
+  videoId String? @unique
+    status String @default("PENDING")
+
+  // Relações
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  video  Video? @relation(fields: [videoId], references: [id], onDelete: SetNull)
+
+
+  transcription Transcription?
+}
+
+model Transcription {
+  id        String   @id @default(uuid())
+  audioId   String   @unique
+  text      String
+  createdAt DateTime @default(now())
+  status    String   @default("PENDING")
+
+  // Relação com Audio
+  audio Audio @relation(fields: [audioId], references: [id], onDelete: Cascade)
 }

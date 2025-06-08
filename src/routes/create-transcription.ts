@@ -5,61 +5,43 @@ import { openai } from "../lib/openai";
 import { prisma } from "../lib/prisma";
 
 export async function createTranscriptionRoute(app: FastifyInstance) {
-    app.post('/audio/:audioId/transcription', async (req, reply) => {
-        
+    app.post('/audio/transcription', async (req, reply) => {
         console.log("📝 Recebendo requisição para transcrição...");
 
-        const paramsSchema = z.object({
-            audioId: z.string().uuid(),
-        });
-
-        const { audioId } = paramsSchema.parse(req.params);
-
-        console.log("📌 Audio ID recebido:", audioId);
-
-        const bodySchema = z.object({
-            prompt: z.string()
-        });
-
-        const { prompt } = bodySchema.parse(req.body);
-
-        console.log("📜 Prompt recebido:", prompt);
-
-        console.log("🔍 Buscando áudio no banco de dados...");
-
-        const audio = await prisma.audio.findUnique({
-            where: { id: audioId }
-        });
+        const formData = req.body;
+        const audio = formData.file; // Recebe o arquivo enviado do frontend
 
         if (!audio) {
-            console.error("❌ Áudio não encontrado no banco de dados!");
-            return reply.status(404).send({ error: "Áudio não encontrado" });
+            console.error("❌ Nenhum arquivo de áudio enviado");
+            return reply.status(400).send({ error: "Arquivo de áudio não enviado" });
         }
 
-        console.log("✅ Áudio encontrado:", audio.path);
+        try {
+            const audioReadStream = createReadStream(audio.tempFilePath);  // Caminho temporário onde o áudio foi salvo
+            
+            // Envia o áudio para transcrição com Whisper
+            const response = await openai.audio.transcriptions.create({
+                file: audioReadStream,
+                model: 'whisper-1',
+                language: 'pt',
+                response_format: 'json',
+                temperature: 0
+            });
 
-        const audioReadStream = createReadStream(audio.path);
+            console.log("✅ Transcrição concluída!");
 
-        console.log("🎙️ Enviando áudio para transcrição...");
-        const response = await openai.audio.transcriptions.create({
-            file: audioReadStream,
-            model: 'whisper-1',
-            language: 'pt',
-            response_format: 'json',
-            temperature: 0,
-            prompt
-        });
+            // Salvar a transcrição no banco de dados
+            await prisma.transcription.create({
+                data: {
+                    audioId: audio.id,  // Se o áudio for armazenado no banco
+                    text: response.text,
+                }
+            });
 
-        console.log("✅ Transcrição concluída!");
-
-        await prisma.transcription.create({
-            data: {
-                audioId: audio.id,
-                text: response.text,
-            }
-        });
-        
-        console.log("✅ Transcrição salva no banco!");
-        return { transcription: response.text };
+            return { transcription: response.text };
+        } catch (error) {
+            console.error("Erro na transcrição:", error);
+            return reply.status(500).send({ error: "Erro ao processar transcrição" });
+        }
     });
 }
