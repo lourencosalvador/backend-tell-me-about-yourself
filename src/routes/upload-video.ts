@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify"
 import { MultipartFile } from "@fastify/multipart"
 import { prisma } from "../lib/prisma"
-import { r2Client, R2_BUCKET_NAME, R2_PUBLIC_URL } from "../lib/r2"
+import { r2Client, R2_BUCKET_NAME, R2_PUBLIC_URL, getSignedVideoUrl } from "../lib/r2"
 import { openai } from "../lib/openai"
 import { FileUtils } from "../lib/file-utils"
 import { PutObjectCommand } from "@aws-sdk/client-s3"
@@ -18,6 +18,59 @@ const TEMP_DIR = path.resolve(__dirname, "../../temp")
 
 // Garantir diretório temporário
 FileUtils.ensureDirectory(TEMP_DIR)
+
+// Função para verificar e atualizar streak
+async function checkAndUpdateStreak(userId: string) {
+  const hoje = new Date()
+  const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
+  const fimHoje = new Date(inicioHoje)
+  fimHoje.setDate(fimHoje.getDate() + 1)
+
+  // Contar vídeos de hoje
+  const videosHoje = await prisma.video.count({
+    where: {
+      userId,
+      createdAt: {
+        gte: inicioHoje,
+        lt: fimHoje
+      }
+    }
+  })
+
+  console.log(`📊 Usuário ${userId} tem ${videosHoje} vídeos hoje`)
+
+  // Se é o 1º vídeo do dia, incrementa o streak (mudado para teste)
+  if (videosHoje >= 1) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { streak: true, lastStreakDate: true }
+    })
+
+    if (!user) return false
+
+    // Verificar se já foi contabilizado o streak hoje
+    const lastStreakDate = user.lastStreakDate
+    const streakJaContabilizado = lastStreakDate && 
+      lastStreakDate.getDate() === hoje.getDate() &&
+      lastStreakDate.getMonth() === hoje.getMonth() &&
+      lastStreakDate.getFullYear() === hoje.getFullYear()
+
+    if (!streakJaContabilizado) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          streak: user.streak + 1,
+          lastStreakDate: hoje
+        }
+      })
+
+      console.log(`🔥 STREAK! Usuário ${userId} conseguiu streak ${user.streak + 1}`)
+      return true // Indica que conquistou um novo streak
+    }
+  }
+
+  return false
+}
 
 export async function uploadVideoRoute(app: FastifyInstance) {
   // Upload de vídeo para Cloudflare R2 e transcrição automática
@@ -46,10 +99,10 @@ export async function uploadVideoRoute(app: FastifyInstance) {
       console.log(`📤 Iniciando upload para usuário: ${user.name}`)
 
       // Salvar arquivo temporário
-      await pump(data.file, fs.createWriteStream(tempVideoPath))
+      await pump(data.file, fs.createWriteStream(tempVideoPath)) 
       
       // Validar se o arquivo foi salvo corretamente
-      if (!FileUtils.isValidFile(tempVideoPath)) {
+      if (!FileUtils.isValidFile(tempVideoPath)) { 
         throw new Error("Falha ao salvar arquivo temporário")
       }
 
@@ -67,7 +120,7 @@ export async function uploadVideoRoute(app: FastifyInstance) {
           .on("error", (error) => {
             console.error(`❌ Erro na extração de áudio: ${error.message}`)
             reject(error)
-          }) 
+          })
           .save(tempAudioPath)
       })
 
@@ -100,9 +153,9 @@ export async function uploadVideoRoute(app: FastifyInstance) {
         ContentType: 'audio/mpeg',
       }))
 
-      // Gerar URLs públicas
-      const videoUrl = R2_PUBLIC_URL ? `${R2_PUBLIC_URL}/${videoKey}` : `https://${R2_BUCKET_NAME}.r2.dev/${videoKey}`
-      const audioUrl = R2_PUBLIC_URL ? `${R2_PUBLIC_URL}/${audioKey}` : `https://${R2_BUCKET_NAME}.r2.dev/${audioKey}`
+      // Gerar URLs (usando chave para URL pressinada depois)
+      const videoUrl = R2_PUBLIC_URL ? `${R2_PUBLIC_URL}/${videoKey}` : videoKey
+      const audioUrl = R2_PUBLIC_URL ? `${R2_PUBLIC_URL}/${audioKey}` : audioKey
 
       console.log(`💾 Salvando registros no banco: ${videoId}`)
 
@@ -110,7 +163,7 @@ export async function uploadVideoRoute(app: FastifyInstance) {
       const video = await prisma.video.create({
         data: { 
           id: videoId, 
-          path: videoUrl, // URL do R2
+          path: videoUrl, // URL ou chave do R2
           userId 
         }
       })
@@ -118,12 +171,15 @@ export async function uploadVideoRoute(app: FastifyInstance) {
       const audio = await prisma.audio.create({
         data: { 
           id: randomUUID(), 
-          path: audioUrl, // URL do R2
+          path: audioUrl, // URL ou chave do R2
           userId, 
           videoId: video.id,
           status: "PROCESSING"
         }
       })
+
+      // Verificar streak APÓS criar o vídeo
+      const conquistouStreak = await checkAndUpdateStreak(userId)
 
       console.log(`🎤 Iniciando transcrição: ${videoId}`)
 
@@ -174,6 +230,7 @@ export async function uploadVideoRoute(app: FastifyInstance) {
         videoId: video.id, 
         audioId: audio.id,
         videoUrl: videoUrl,
+        conquistouStreak, // Novo campo indicando se conquistou streak
         message: "Upload realizado com sucesso para Cloudflare R2 e transcrição processada"
       })
     } catch (error) {
@@ -189,7 +246,7 @@ export async function uploadVideoRoute(app: FastifyInstance) {
     }
   })
 
-  // Buscar vídeos do usuário
+  // Buscar vídeos do usuário COM URLs pressinadas
   app.get('/videos/:userId', async (req, reply) => {
     const paramsSchema = z.object({ userId: z.string().uuid() })
 
@@ -208,23 +265,58 @@ export async function uploadVideoRoute(app: FastifyInstance) {
         orderBy: { createdAt: 'desc' }
       })
 
+      // Gerar URLs pressinadas para cada vídeo
+      const videosWithSignedUrls = await Promise.all(
+        videos.map(async (video) => {
+          try {
+            // Extrair a chave do caminho (se for URL completa, pegar só a chave)
+            const videoKey = video.path.includes('videos/') 
+              ? video.path.split('/').slice(-3).join('/') // videos/userId/videoId.mp4
+              : `videos/${userId}/${video.id}.mp4`
+            
+            // Gerar URL pressinada que sempre funciona
+            const signedUrl = await getSignedVideoUrl(videoKey)
+            
+            return {
+              id: video.id,
+              url: signedUrl, // URL pressinada que funciona por 1 hora
+              createdAt: video.createdAt,
+              audio: video.audio ? {
+                id: video.audio.id,
+                url: video.audio.path,
+                status: video.audio.status,
+                transcription: video.audio.transcription ? {
+                  id: video.audio.transcription.id,
+                  text: video.audio.transcription.text,
+                  status: video.audio.transcription.status,
+                  createdAt: video.audio.transcription.createdAt
+                } : null
+              } : null
+            }
+          } catch (error) {
+            console.error(`❌ Erro ao gerar URL pressinada para vídeo ${video.id}:`, error)
+            return {
+              id: video.id,
+              url: video.path, // Fallback para URL original
+              createdAt: video.createdAt,
+              audio: video.audio ? {
+                id: video.audio.id,
+                url: video.audio.path,
+                status: video.audio.status,
+                transcription: video.audio.transcription ? {
+                  id: video.audio.transcription.id,
+                  text: video.audio.transcription.text,
+                  status: video.audio.transcription.status,
+                  createdAt: video.audio.transcription.createdAt
+                } : null
+              } : null
+            }
+          }
+        })
+      )
+
       return reply.send({ 
-        videos: videos.map(video => ({
-          id: video.id,
-          url: video.path,
-          createdAt: video.createdAt,
-          audio: video.audio ? {
-            id: video.audio.id,
-            url: video.audio.path,
-            status: video.audio.status,
-            transcription: video.audio.transcription ? {
-              id: video.audio.transcription.id,
-              text: video.audio.transcription.text,
-              status: video.audio.transcription.status,
-              createdAt: video.audio.transcription.createdAt
-            } : null
-          } : null
-        }))
+        videos: videosWithSignedUrls
       })
     } catch (error) {
       console.error("❌ Erro ao buscar vídeos:", error)

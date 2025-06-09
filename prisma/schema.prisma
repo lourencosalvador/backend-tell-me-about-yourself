@@ -21,16 +21,15 @@ model User {
   class     String
   photoUrl  String?
   recommendation String? 
+  streak    Int      @default(0)
+  lastStreakDate DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-
 
   // Relações
   videos Video[]
   audios Audio[]
 }
-
 
 model Video {
   id        String   @id @default(uuid())
@@ -53,7 +52,6 @@ model Audio {
   // Relações
   user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
   video  Video? @relation(fields: [videoId], references: [id], onDelete: SetNull)
-
 
   transcription Transcription?
 }

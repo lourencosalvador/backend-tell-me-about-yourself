@@ -1,0 +1,25 @@
+### Testar endpoints de recomendações
+
+### 1. Buscar recomendação existente
+GET https://c5223235197fb5cc3841e9ca2af3b19c.serveo.net/users/50966be6-b75e-4da9-9545-576450b959d8/recommendation
+
+### 2. Gerar nova recomendação
+POST https://c5223235197fb5cc3841e9ca2af3b19c.serveo.net/users/50966be6-b75e-4da9-9545-576450b959d8/recommendation/generate
+Content-Type: application/json
+
+### 3. Regenerar recomendação (forçar)
+POST https://c5223235197fb5cc3841e9ca2af3b19c.serveo.net/users/50966be6-b75e-4da9-9545-576450b959d8/recommendation/regenerate
+Content-Type: application/json
+
+### Teste local
+
+### 1. Buscar recomendação local
+GET http://localhost:8000/users/50966be6-b75e-4da9-9545-576450b959d8/recommendation
+
+### 2. Gerar recomendação local
+POST http://localhost:8000/users/50966be6-b75e-4da9-9545-576450b959d8/recommendation/generate
+Content-Type: application/json
+
+### 3. Regenerar recomendação local
+POST http://localhost:8000/users/50966be6-b75e-4da9-9545-576450b959d8/recommendation/regenerate
+Content-Type: application/json 

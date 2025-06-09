@@ -13,8 +13,9 @@ import { updateUser } from "./routes/user/update-user"
 import { createUser } from "./routes/user/create-user"
 import { userVideos } from "./routes/user-videos"
 import { deleteVideo } from "./routes/delete-video"
+import { recommendationsRoute } from "./routes/recommendations"
 import { streamVideo } from "./routes/stream-video"
-
+ 
 const app = fastify() 
 
 app.setValidatorCompiler(validatorCompiler)
@@ -25,6 +26,7 @@ app.register(multipart)
 app.register(uploadVideoRoute)
 app.register(createTranscriptionRoute)
 app.register(getVideoTranscriptionRoute)
+app.register(streamVideo)
 
 app.register(getUser) 
 app.register(authUser)
@@ -33,7 +35,7 @@ app.register(deleteUser)
 app.register(createUser)
 app.register(userVideos)
 app.register(deleteVideo)
-app.register(streamVideo)
+app.register(recommendationsRoute)
 
 app.listen({ port: 8000, host: '0.0.0.0' }).then(() => {
   console.log("Server running on port 8000")

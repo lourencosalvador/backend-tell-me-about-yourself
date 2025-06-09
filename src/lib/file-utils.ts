@@ -1,7 +1,7 @@
 import fs from "fs"
 import path from "path"
 
-export class FileUtils {
+export class FileUtils { 
   /**
    * Remove arquivo de forma segura, sem lançar erro se o arquivo não existir
    */
