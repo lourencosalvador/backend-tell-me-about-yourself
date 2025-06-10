@@ -28,7 +28,7 @@ export async function deleteVideo(app: FastifyInstance) {
       console.log(`🗑️ Iniciando deleção completa do vídeo: ${videoId}`);
 
       // Deletar arquivos do Cloudflare R2
-      const deletePromises = [];
+      const deletePromises: Promise<any>[] = [];
 
       // Deletar vídeo do R2
       if (video.path) {

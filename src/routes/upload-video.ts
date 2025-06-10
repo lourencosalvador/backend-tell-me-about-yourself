@@ -4,6 +4,8 @@ import { prisma } from "../lib/prisma"
 import { r2Client, R2_BUCKET_NAME, R2_PUBLIC_URL, getSignedVideoUrl } from "../lib/r2"
 import { openai } from "../lib/openai"
 import { FileUtils } from "../lib/file-utils"
+import { SkillsAnalyzer } from "../services/skillsAnalyzer"
+import { AIEnhancedAnalyzer } from "../services/aiEnhancedAnalyzer"
 import { PutObjectCommand } from "@aws-sdk/client-s3"
 import { randomUUID } from "crypto"
 import { pipeline } from "stream"
@@ -211,6 +213,90 @@ export async function uploadVideoRoute(app: FastifyInstance) {
         })
 
         console.log(`✅ Transcrição concluída para vídeo: ${videoId}`)
+
+        // 🧠 ANÁLISE DE SKILLS - Processar transcrição para extrair competências
+        try {
+          console.log(`🔍 Analisando skills do vídeo: ${videoId}`)
+          
+          // Análise de skills
+          console.log('🔍 Analisando skills...');
+          
+          const skillsAnalyzer = new SkillsAnalyzer();
+          const skillsResult = skillsAnalyzer.analyzeTranscription(transcriptionResponse.text);
+
+          // Salvar Hard Skills no banco
+          if (skillsResult.hardSkills.length > 0) {
+            const hardSkillsData = skillsResult.hardSkills.map(skill => ({
+              id: randomUUID(),
+              videoId: video.id,
+              userId: userId,
+              skillName: skill.name,
+              skillCategory: skill.category,
+              confidence: skill.confidence,
+              mentions: skill.mentions,
+              context: JSON.stringify(skill.context),
+              type: 'HARD' as const
+            }))
+
+            await prisma.skill.createMany({
+              data: hardSkillsData,
+              skipDuplicates: true
+            })
+
+            console.log(`💪 ${skillsResult.hardSkills.length} Hard Skills detectadas`)
+          }
+
+          // Salvar Soft Skills no banco
+          if (skillsResult.softSkills.length > 0) {
+            const softSkillsData = skillsResult.softSkills.map(skill => ({
+              id: randomUUID(),
+              videoId: video.id,
+              userId: userId,
+              skillName: skill.name,
+              skillCategory: skill.category,
+              confidence: skill.score / 100, // Converter score para confidence
+              mentions: skill.indicators.length,
+              context: JSON.stringify({
+                indicators: skill.indicators,
+                examples: skill.examples
+              }),
+              type: 'SOFT' as const
+            }))
+
+            await prisma.skill.createMany({
+              data: softSkillsData,
+              skipDuplicates: true
+            })
+
+            console.log(`🤝 ${skillsResult.softSkills.length} Soft Skills detectadas`)
+          }
+
+          // Atualizar perfil do usuário se houver sugestões
+          if (skillsResult.overallProfile && skillsResult.careerSuggestions.length > 0) {
+            await prisma.userProfile.upsert({
+              where: { userId: userId },
+              update: {
+                profileDescription: skillsResult.overallProfile,
+                careerSuggestions: JSON.stringify(skillsResult.careerSuggestions),
+                lastAnalyzedAt: new Date()
+              },
+              create: {
+                id: randomUUID(),
+                userId: userId,
+                profileDescription: skillsResult.overallProfile,
+                careerSuggestions: JSON.stringify(skillsResult.careerSuggestions),
+                lastAnalyzedAt: new Date()
+              }
+            })
+
+            console.log(`👤 Perfil atualizado: ${skillsResult.overallProfile}`)
+          }
+
+        } catch (skillsError) {
+          console.error(`❌ Erro na análise de skills: ${skillsError}`)
+          // Não falhar o upload por erro na análise de skills
+        }
+
       } catch (transcriptionError) {
         console.error(`❌ Erro na transcrição: ${transcriptionError}`)
         

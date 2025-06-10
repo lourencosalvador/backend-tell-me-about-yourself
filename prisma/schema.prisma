@@ -29,6 +29,8 @@ model User {
   // Relações
   videos Video[]
   audios Audio[]
+  skills Skill[]
+  profile UserProfile?
 }
 
 model Video {
@@ -40,6 +42,7 @@ model Video {
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   audio Audio?
+  skills Skill[]
 }
 
 model Audio {
@@ -65,4 +68,40 @@ model Transcription {
 
   // Relação com Audio
   audio Audio @relation(fields: [audioId], references: [id], onDelete: Cascade)
+}
+
+model Skill {
+  id            String   @id @default(uuid())
+  skillName     String
+  skillCategory String
+  confidence    Float    // 0.0 a 1.0 para hard skills, 0.0 a 1.0 para soft skills
+  mentions      Int      @default(1)
+  context       String   // JSON com contexto, indicadores ou exemplos
+  type          String   // 'HARD' ou 'SOFT'
+  
+  // Relações
+  userId   String
+  videoId  String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video    Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  // Índices para performance
+  @@index([userId, type])
+  @@index([skillName, type])
+}
+
+model UserProfile {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  profileDescription String?  // "Desenvolvedor frontend com forte comunicação"
+  careerSuggestions  String?  // JSON array ["Tech Lead", "Frontend Senior"]
+  lastAnalyzedAt     DateTime
+  
+  // Relação
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
