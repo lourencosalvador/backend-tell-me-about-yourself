@@ -20,7 +20,8 @@ export async function sendToAnalysis(transcriptions: { text: string }[]) {
       { role: "user", content: `
         Estas são transcrições de um estudante. Com base nelas, analise os padrões de pensamento,
         interesses e habilidades demonstradas. Escolha **apenas uma área** da informática onde ele pode se destacar,
-        e explique detalhadamente **por que** essa área é a mais adequada para ele.
+        e explique detalhadamente **por que** essa área é a mais adequada para ele. e quando tiveres a fazer essa parte faz 
+        se dirigindo a ele.
 
         **Saída esperada:**  
         Retorne um JSON no seguinte formato:

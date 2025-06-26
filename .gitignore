@@ -1,3 +1,8 @@
+# Dependências
 node_modules
-# Keep environment variables out of version control
+
+# Variáveis de ambiente (NUNCA devem ser versionadas)
 .env
+.env.backup
+uploads/
+temp/

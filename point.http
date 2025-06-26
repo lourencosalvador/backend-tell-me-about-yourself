@@ -6,25 +6,25 @@ Content-Type: application/json
 }
 
 ### Criar um novo usuário
-POST http://localhost:3333/users
+POST  https://f3e6f88c162aa0b172159baff88c5b0b.serveo.net/users
 Content-Type: application/json
 
 {
-  "name": "Usuário Teste",
-  "email": "usuario@gmail.com",
-  "password": "senha123",
-  "class": "11ª",
-  "photoUrl": "https://i.pinimg.com/736x/5f/7f/04/5f7f042bfbf763e36130d5bab95e13de.jpg"
+  "name": "Lorrys",
+  "email": "lorryscode@gmail.com",
+  "password": "lorrys123",
+  "class": "13ª",
+  "photoUrl": "https://avatars.githubusercontent.com/u/149355093?s=400&u=f4120a2dacabd8857b74f39ade676d013d2809cc&v=4"
 }
 
 ###
 
-POST http://localhost:3333/users/auth
+POST https://1c77848acddb60f7f12e32a2224dbdf1.serveo.net/users/auth
 Content-Type: application/json
 
 {
-  "email": "usuario@gmail.com",
-  "password": "senha123"
+  "email": "plamedisala@gmail.com",
+  "password": "plamedi123"
 }
 
 ###
