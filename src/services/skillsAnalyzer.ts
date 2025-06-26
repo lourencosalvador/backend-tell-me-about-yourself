@@ -1,5 +1,10 @@
 import { AdvancedNLPAnalyzer } from './advancedNLP';
 
+/**
+ * Analisador de habilidades que processa transcrições para identificar
+ * competências técnicas e comportamentais do usuário
+ */
+
 interface HardSkill {
   name: string;
   category: string;
@@ -253,6 +258,10 @@ class SkillsAnalyzer {
     this.nlpAnalyzer = new AdvancedNLPAnalyzer();
   }
 
+  /**
+   * Analisa o texto usando NLP avançado para identificar competências
+   * e gerar recomendações personalizadas baseadas no contexto
+   */
   public analyzeTranscription(transcription: string): SkillsAnalysisResult {
     const text = transcription.toLowerCase();
     
@@ -273,6 +282,10 @@ class SkillsAnalyzer {
     };
   }
 
+  /**
+   * Extrai hard skills do texto com análise contextual
+   * para determinar o nível de confiança na identificação
+   */
   private extractHardSkills(text: string): HardSkill[] {
     const skills: Map<string, HardSkill> = new Map();
 
@@ -389,6 +402,10 @@ class SkillsAnalyzer {
     return names[skillKey] || skillKey;
   }
 
+  /**
+   * Gera perfil e sugestões de carreira baseados
+   * na análise combinada de hard skills e soft skills
+   */
   private generateProfile(hardSkills: HardSkill[], softSkills: SoftSkill[]): string {
     const topHardSkill = hardSkills[0];
     const topSoftSkill = softSkills[0];

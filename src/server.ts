@@ -5,6 +5,7 @@ import { validatorCompiler, serializerCompiler } from "fastify-type-provider-zod
 import multipart from "@fastify/multipart"
 import { createTranscriptionRoute } from "./routes/create-transcription"
 import { uploadVideoRoute } from "./routes/upload-video"
+import { uploadVideoPythonRoute } from "./routes/upload-video-python"
 import { getVideoTranscriptionRoute } from "./routes/get-video-transcription"
 import { getUser } from "./routes/user/get-user"
 import { authUser } from "./routes/user/user-auth"
@@ -24,12 +25,20 @@ const app = fastify()
 app.setValidatorCompiler(validatorCompiler)
 app.setSerializerCompiler(serializerCompiler)
 app.register(fastifyCors, { origin: '*' })
-app.register(multipart)
+app.register(multipart, {
+  limits: {
+    fileSize: 200 * 1024 * 1024, // 200MB
+    files: 1,
+    headerPairs: 200
+  }
+})
 
 app.register(uploadVideoRoute)
 app.register(createTranscriptionRoute)
 app.register(getVideoTranscriptionRoute)
 app.register(streamVideo)
+
+app.register(uploadVideoPythonRoute)
 
 app.register(getUser) 
 app.register(authUser)
@@ -44,5 +53,9 @@ app.register(userSkillsRoute)
 app.register(aiAnalysisRoutes)
 
 app.listen({ port: 8000, host: '0.0.0.0' }).then(() => {
-  console.log("Server running on port 8000")
+  console.log("🚀 Server running on port 8000")
+  console.log("📁 Upload routes available:")
+  console.log("   - POST /videos/upload (Cloudflare R2)")
+  console.log("   - POST /videos/upload-python (Google Drive via Python)")
+  console.log("   - GET /python-service/health (Python service status)")
 })

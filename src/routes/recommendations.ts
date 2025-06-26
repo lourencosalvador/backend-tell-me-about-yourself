@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify"
 import { prisma } from "../lib/prisma"
 import { openai } from "../lib/openai"
 import { z } from "zod"
+import process from "process"
 
 export async function recommendationsRoute(app: FastifyInstance) {
   
@@ -126,7 +127,16 @@ export async function recommendationsRoute(app: FastifyInstance) {
         })
       }
 
-      console.log(`📚 Analisando ${transcricoes.length} transcrições...`)
+      if (transcricoes.length < 2) {
+        return reply.status(400).send({ 
+          error: `Você precisa de pelo menos 2 vídeos com transcrições para gerar uma recomendação. Você tem ${transcricoes.length} vídeo(s). Grave mais 1 vídeo e tente novamente.`,
+          currentVideos: transcricoes.length,
+          requiredVideos: 2,
+          missingVideos: 2 - transcricoes.length
+        })
+      }
+
+      console.log(`📚 Analisando ${transcricoes.length} transcrições para recomendação robusta...`)
 
       // Preparar o texto combinado das transcrições
       const textoCompleto = transcricoes
@@ -229,7 +239,7 @@ Com base na análise completa dessas transcrições, identifique a área da info
       
       return reply.status(500).send({ 
         error: "Erro interno ao gerar recomendação",
-        details: __DEV__ ? errorMessage : undefined
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
       })
     }
   })
